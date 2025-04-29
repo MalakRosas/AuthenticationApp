@@ -40,8 +40,8 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password, rememberMe } = req.body;
-  let loginStatus = 'failure'; // default to failure
-  let userId = null; // we'll assign if available
+  let loginStatus = 'failure'; 
+  let userId = null; // assign if available
 
   try {
     if (!email || !password) {
@@ -179,11 +179,11 @@ router.get('/oauth/github/callback', async (req, res) => {
       return res.status(400).json({ message: 'Failed to retrieve access token' });
     }
 
-    // Fetch user info
     const userResponse = await axios.get('https://api.github.com/user', {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
-    const { id, login } = userResponse.data;
+    const { id: githubId, login } = userResponse.data;
+
     const emailResponse = await axios.get('https://api.github.com/user/emails', {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
@@ -192,25 +192,30 @@ router.get('/oauth/github/callback', async (req, res) => {
     const primaryEmailObj = emails.find(e => e.primary && e.verified);
     const email = primaryEmailObj ? primaryEmailObj.email : null;
 
-    let user = await USER.findOne({ github_id: id });
-
-    if (!user && email) {
-      user = await USER.findOne({ email: email });
-
-      if (user) {
-        user.github_id = id;
-        user.auth_method = 'github';
-        await user.save();
-      }
-    }
+    let user = await USER.findOne({ github_id: githubId });
 
     if (!user) {
+      const existingEmailUser = email ? await USER.findOne({ email: email }) : null;
+
+      if (existingEmailUser) {
+        await new LoginLog({
+          user_id: null,
+          ip_address: req.ip,
+          timestamp: new Date(),
+          status: loginStatus,
+          reason: 'Email already associated with another user'
+        }).save();
+
+        return res.status(409).json({ message: 'Email already associated with another account' });
+      }
+
       user = new USER({
         name: login,
         email: email || undefined,
         auth_method: 'github',
-        github_id: id
+        github_id: githubId
       });
+
       await user.save();
     }
 
@@ -243,5 +248,6 @@ router.get('/oauth/github/callback', async (req, res) => {
     res.status(500).json({ message: 'OAuth login failed' });
   }
 });
+
 
 export default router;

@@ -16,15 +16,14 @@ function Login() {
       const res = await axios.post('http://localhost:5000/login', {
         ...values,
         rememberMe,
-      }, { withCredentials: true }); // allow cookies 
-
-      console.log(res);
+      }, { withCredentials: true });
+  
       navigate('/Home');
     } catch (err) {
-      console.error(err);
-      alert("An error occurred. Please try again.");
+      const msg = err.response?.data?.message || 'An unexpected error occurred.';
+      alert(msg);
     }
-  };
+  };  
 
   const handleGithubLogin = () => {
     window.location.href = `http://localhost:5000/oauth/github?rememberMe=${rememberMe}`; // hb3t l value bta3t remember me f l url parameters

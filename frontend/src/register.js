@@ -17,23 +17,30 @@ function Register() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
+  
     if (!agreeTerms) {
       alert("You must agree to the terms and conditions.");
       return;
     }
+  
     if (!validatePassword(values.password)) {
       alert("Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number and one special character.");
       return;
     }
+  
     try {
       const res = await axios.post('http://localhost:5000/register', values);
-      navigate('/login')
+      alert(res.data.message);
+      navigate('/login');
     } catch (err) {
       console.error(err);
-      alert("An error occurred. Please try again.");
+      if (err.response && err.response.data && err.response.data.message) {
+        alert(err.response.data.message);
+      } else {
+        alert("An error occurred. Please try again.");
+      }
     }
-  };
+  };  
 
   return (
     <div className="container d-flex justify-content-center align-items-center min-vh-100">
